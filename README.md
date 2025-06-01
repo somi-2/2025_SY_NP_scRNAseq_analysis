@@ -1,2 +1,4 @@
 # NP_scRNAseq_analysis
-Scripts for preprocessing scRNA-seq dataset and converting into reference file for CIBERSORTx
+#Project Description : Intervertebral disc degeneration (IDD) is a condition that refers to the wearing of the disc, causing lower back pain. There are multiple treatments available for IDD, but they do not provide complete relief. Regenerative cell therapy has arisen as a new method in recent years that effectively helps the disc to regenerate. Disc cells are grown primarily in Foetal bovine serum (FBS). Using FBS raises various ethical concerns and poses a risk of microbial contamination. Multiple substitutes currently exist that can be used instead of xenogenic media. We aim to assess non-xenogenic media as an alternative to FBS in the expansion of intervertebral disc cells by transcriptome analysis. We will used CIBERSORTx to estimate and compare the population of cells regenerated in various media.  
+#Methods : 
+##1.scRNA-seq_dataprocessing_for_reference_file :  
