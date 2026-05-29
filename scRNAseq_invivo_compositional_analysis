@@ -1,0 +1,198 @@
+#=============== Install packages============
+
+install.packages(c(
+  "vegan",
+  "compositions",
+  "dplyr",
+  "ggplot2"
+))
+
+#================= Load libraries============
+
+library(vegan)
+library(compositions)
+library(dplyr)
+library(ggplot2)
+
+# =============== Read data =================
+counts <- read.csv(
+  "C:/Users/ASUS/Downloads/scCODA_counts.csv",
+  row.names = 1
+)
+#======================= Create metadata ===============
+
+# Condition extraction
+Condition <- ifelse(
+  grepl("Healthy", rownames(counts)),
+  "Healthy",
+  "Diseased"
+)
+Condition <- ifelse(
+  grepl("Healthy", rownames(counts)),
+  "Early_IDD",
+  "Late_IDD"
+)
+
+# Dataset extraction
+Dataset <- gsub(
+  "_.*",
+  "",
+  rownames(counts)
+)
+
+metadata <- data.frame(
+  Sample = rownames(counts),
+  Condition = Condition,
+  Dataset = Dataset
+)
+
+#  Define cell types
+
+celltypes <- colnames(counts)
+
+# Convert counts to proportions
+
+props <- counts / rowSums(counts)
+
+# CLR transformation
+# Add pseudocount to avoid log(0)
+
+clr_matrix <- clr(props + 1e-6)
+
+# Convert to dataframe
+clr_df <- cbind(
+  metadata,
+  as.data.frame(clr_matrix)
+)
+# PERMANOVA
+
+adonis_result <- adonis2(
+  clr_matrix ~ Condition + Dataset,
+  data = metadata,
+  method = "euclidean",
+  permutations = 999
+)
+
+print("PERMANOVA RESULT")
+print(adonis_result)
+
+#  Check homogeneity of dispersion
+
+dist_matrix <- dist(clr_matrix)
+
+dispersion <- betadisper(
+  dist_matrix,
+  metadata$Condition
+)
+
+dispersion_test <- permutest(dispersion)
+
+print("DISPERSION TEST")
+print(dispersion_test)
+
+# Wilcoxon tests per cell type
+
+results <- data.frame()
+
+for(ct in celltypes){
+  
+  test <- wilcox.test(
+    clr_df[[ct]] ~ clr_df$Condition
+  )
+  
+  healthy_mean <- mean(
+    clr_df[clr_df$Condition == "Early_IDD", ct]
+  )
+  
+  diseased_mean <- mean(
+    clr_df[clr_df$Condition == "Late_IDD", ct]
+  )
+  
+  logFC <- diseased_mean - healthy_mean
+  
+  results <- rbind(
+    results,
+    data.frame(
+      CellType = ct,
+      pvalue = test$p.value,
+      logFC = logFC
+    )
+  )
+}
+
+# Multiple testing correction
+
+
+results$FDR <- p.adjust(
+  results$pvalue,
+  method = "BH"
+)
+# View results
+
+
+print("WILCOXON RESULTS")
+print(results)
+
+# boxplot for HNP
+
+metadata$Condition <- factor(
+  metadata$Condition,
+  levels = c("Early_IDD", "Late_IDD")
+)
+clr_df$Condition <- factor(
+  clr_df$Condition,
+  levels = c("Early_IDD", "Late_IDD")
+)
+
+ggplot(
+  clr_df,
+  aes(
+    x = Condition,
+    y = HNP,
+    fill = Condition
+  )
+) +
+  
+  geom_boxplot() +
+  
+ 
+  
+  scale_fill_manual(
+    values = c(
+      "Early_IDD" = "skyblue",
+      "Late_IDD" = "salmon"
+    )
+  ) +
+  
+  theme_classic() +
+  
+  labs(
+    y = "CLR HNP"
+  )
+
+# For FNP
+ggplot(
+  clr_df,
+  aes(
+    x = Condition,
+    y = FNP,
+    fill = Condition
+  )
+) +
+  
+  geom_boxplot() +
+  
+  
+  
+  scale_fill_manual(
+    values = c(
+      "Early_IDD" = "skyblue",
+      "Late_IDD" = "salmon"
+    )
+  ) +
+  
+  theme_classic() +
+  
+  labs(
+    y = "CLR FNP"
+  )
